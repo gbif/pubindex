@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  ~ Copyright 2011 Global Biodiversity Information Facility (GBIF)
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!DOCTYPE mapper
+    PUBLIC "-//ibatis.apache.org//DTD Mapper 3.0//EN"
+    "http://ibatis.apache.org/dtd/ibatis-3-mapper.dtd">
+<mapper namespace="org.gbif.pubindex.model.Article">
+  <resultMap type="Article" id="articleRecordResult">
+    <id property="id" column="id"/>
+    <result column="journal_fk" property="journalId"/>
+    <result column="title" property="title"/>
+    <result column="authors" property="authors"/>
+    <result column="abstract" property="description"/>
+    <result column="keywords" property="keywords"/>
+    <result column="extracted_text" property="extractedText"/>
+    <result column="published_date" property="publishedDate"/>
+    <result column="published_in" property="publishedIn"/>
+    <result column="url" property="url"/>
+    <result column="doi" property="doi"/>
+    <result column="isbn" property="isbn"/>
+    <result column="created" property="created"/>
+    <result column="last_indexed" property="lastIndexed"/>
+    <result column="guid" property="guid"/>
+    <result column="url_content_type" property="urlContentType"/>
+    <result column="error" property="error"/>
+
+  </resultMap>
+
+  <sql id="articleBasic">select * from article </sql>
+
+  <select id="getArticle" parameterType="int" resultMap="articleRecordResult">
+    <include refid="articleBasic"/>where id = #{id}
+  </select>
+
+  <delete id="deleteArticle" parameterType="int">
+    delete from article where id = #{id}
+  </delete>
+
+  <insert id="insertArticle" parameterType="Article" useGeneratedKeys="true" keyProperty="id">
+    insert into article (journal_fk,
+      title, authors, abstract, extracted_text,
+      url, url_content_type, error, doi, isbn,
+      created, published_date, last_indexed,
+      keywords, published_in, guid)
+    values (#{journalId,jdbcType=INTEGER},
+      #{title,jdbcType=VARCHAR}, #{authors,jdbcType=VARCHAR}, #{description,jdbcType=VARCHAR}, #{extractedText,jdbcType=VARCHAR},
+      #{url,jdbcType=VARCHAR}, #{urlContentType,jdbcType=VARCHAR}, #{error,jdbcType=VARCHAR}, #{doi,jdbcType=VARCHAR}, #{isbn,jdbcType=VARCHAR},
+      #{created,jdbcType=TIMESTAMP}, #{publishedDate,jdbcType=TIMESTAMP}, #{lastIndexed,jdbcType=TIMESTAMP},
+      #{keywords,jdbcType=VARCHAR}, #{publishedIn,jdbcType=VARCHAR}, #{guid,jdbcType=VARCHAR})
+  </insert>
+
+  <update id="updateArticle" parameterType="Article">
+    update article
+    set journal_fk = #{journalId,jdbcType=INTEGER},
+      title = #{title,jdbcType=VARCHAR},
+      authors = #{authors,jdbcType=VARCHAR},
+      abstract = #{description,jdbcType=VARCHAR},
+      url = #{url,jdbcType=VARCHAR},
+      url_content_type = #{urlContentType,jdbcType=VARCHAR},
+      extracted_text = #{extractedText,jdbcType=VARCHAR},
+      error = #{error,jdbcType=VARCHAR},
+      doi = #{doi,jdbcType=VARCHAR},
+      isbn = #{isbn,jdbcType=VARCHAR},
+      created = #{created,jdbcType=TIMESTAMP},
+      published_date= #{publishedDate,jdbcType=TIMESTAMP},
+      published_in= #{publishedIn,jdbcType=VARCHAR},
+      last_indexed = #{lastIndexed,jdbcType=TIMESTAMP},
+      guid= #{guid,jdbcType=VARCHAR},
+      keywords = #{keywords,jdbcType=VARCHAR}
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+
+
+  <select id="list" resultMap="articleRecordResult">
+    <include refid="articleBasic"/>
+  </select>
+  <select id="getByJournal" parameterType="int" resultMap="articleRecordResult">
+    <include refid="articleBasic"/> where journal_fk = #{id}
+  </select>
+  <select id="getByUrl" parameterType="String" resultMap="articleRecordResult">
+    <include refid="articleBasic"/> where url = #{url}
+  </select>
+  <select id="getByGuidAndJournal" parameterType="java.util.HashMap" resultMap="articleRecordResult">
+    <include refid="articleBasic"/> where journal_fk = #{journalId} and guid = #{guid} limit 1
+  </select>
+  <select id="listNotYetIndexed" resultMap="articleRecordResult">
+    <include refid="articleBasic"/> where last_indexed is null
+  </select>
+
+
+</mapper>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+  PUBLIC "-//ibatis.apache.org//DTD Config 3.0//EN"
+  "http://ibatis.apache.org/dtd/ibatis-3-config.dtd">
+<configuration>
+	<!-- Used to reduce the verboseness of the configuration on each mapping -->
+    <typeAliases>
+        <typeAlias type="org.gbif.pubindex.model.Journal" alias="Journal" />
+      <typeAlias type="org.gbif.pubindex.model.Article" alias="Article"/>
+      <typeAlias type="org.gbif.pubindex.model.NameFound" alias="NameFound"/>
+    </typeAliases>
+	<!-- TODO - remove the DB config to a properties file -->
+    <environments default="production">
+        <environment id="production">
+            <transactionManager type="JDBC"/>
+            <dataSource type="org.gbif.common.mybatis.C3P0DataSourceFactory">
+                <property name="driverClass" value="org.postgresql.Driver" />
+                <property name="jdbcUrl" value="jdbc:postgresql://boma.gbif.org:5432/pubindex" />
+                <property name="user" value="ecat"/>
+                <property name="password" value="ehZFl84ki"/>
+                <property name="idleConnectionTestPeriod" value="60"/>
+                <property name="maxPoolSize" value="20"/>
+                <property name="maxIdleTime" value="600"/>
+                <property name="preferredTestQuery" value="SELECT 1"/>
+            </dataSource>
+        </environment>
+    </environments>
+	<!-- Add each mapping to read -->
+    <mappers>
+      <mapper resource="sqlmappings/journal.xml" />
+      <mapper resource="sqlmappings/article.xml"/>
+      <mapper resource="sqlmappings/nameFound.xml"/>
+    </mappers>
+</configuration>
