@@ -17,14 +17,12 @@
 /**
  *
  */
-package org.gbif.pubindex.manager.impl;
+package org.gbif.pubindex.service.impl;
 
-import org.gbif.pubindex.manager.JournalManager;
+import org.gbif.pubindex.service.JournalService;
 import org.gbif.pubindex.model.Journal;
 import org.gbif.pubindex.rome.modules.prism.PrismModule;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -45,11 +43,11 @@ import org.apache.http.impl.client.DefaultHttpClient;
 /**
  *
  */
-public class JournalManagerImpl extends BaseManager<Journal> implements JournalManager {
+public class JournalServiceImpl extends BaseServiceImpl<Journal> implements JournalService {
   private DefaultHttpClient client;
 
   @Inject
-  public JournalManagerImpl(DefaultHttpClient client) {
+  public JournalServiceImpl(DefaultHttpClient client) {
     super("Journal");
     this.client=client;
   }

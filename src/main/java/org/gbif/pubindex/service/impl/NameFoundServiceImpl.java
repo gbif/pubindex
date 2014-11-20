@@ -17,30 +17,28 @@
 /**
  *
  */
-package org.gbif.pubindex.manager.impl;
+package org.gbif.pubindex.service.impl;
 
-import org.gbif.pubindex.manager.ArticleManager;
-import org.gbif.pubindex.manager.NameFoundManager;
-import org.gbif.pubindex.model.Article;
+import org.gbif.pubindex.service.ArticleService;
+import org.gbif.pubindex.service.NameFoundService;
 import org.gbif.pubindex.model.NameFound;
 
 import java.util.List;
 
 import com.google.inject.Inject;
-import com.google.inject.name.Named;
 
 /**
  * @author mdoering
  *
  */
-public class NameFoundManagerImpl extends BaseManager<NameFound> implements NameFoundManager {
+public class NameFoundServiceImpl extends BaseServiceImpl<NameFound> implements NameFoundService {
 
-    private ArticleManager articleManager;
+    private ArticleService articleService;
 
 @Inject
-public NameFoundManagerImpl(ArticleManager articleManager) {
+public NameFoundServiceImpl(ArticleService articleService) {
     super("NameFound");
-    this.articleManager=articleManager;
+    this.articleService = articleService;
   }
 
   @Override

@@ -13,18 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gbif.pubindex.manager;
+package org.gbif.pubindex.service;
 
-import org.gbif.pubindex.model.Article;
-import org.gbif.pubindex.model.NameFound;
+import org.gbif.pubindex.model.Identifiable;
 
 import java.util.List;
 
-public interface ArticleIndexer {
+public interface CRUDService<T extends Identifiable> {
 
-  /**
-   * Scans an article for scientific names using a namefinding webservice.
-   * This includes downloading any missing files like pdfs linked from the article.
-   */
-  public List<NameFound> index(Article article);
+  public T get(Integer id);
+
+  public void insert(T object);
+
+  public void delete(int id);
+
+  public void update(T object);
+
+  public List<T> list();
+
 }

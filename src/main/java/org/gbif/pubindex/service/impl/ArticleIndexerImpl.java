@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gbif.pubindex.manager.impl;
+package org.gbif.pubindex.service.impl;
 
-import org.gbif.pubindex.manager.ArticleIndexer;
-import org.gbif.pubindex.manager.ArticleManager;
-import org.gbif.pubindex.manager.NameFoundManager;
+import org.gbif.pubindex.service.ArticleIndexer;
+import org.gbif.pubindex.service.ArticleService;
+import org.gbif.pubindex.service.NameFoundService;
 import org.gbif.pubindex.model.Article;
 import org.gbif.pubindex.model.NameFound;
 import org.gbif.utils.HttpUtil;
@@ -55,18 +55,18 @@ public class ArticleIndexerImpl implements ArticleIndexer {
   private Pattern cleanTFName = Pattern.compile("\\[(.+)\\]");
   private String finderWS = "http://ecat-dev.gbif.org/tf";
   private Logger log = LoggerFactory.getLogger(getClass());
-  private ArticleManager articleManager;
-  private NameFoundManager nameFoundManager;
+  private ArticleService articleService;
+  private NameFoundService nameFoundService;
   private HttpUtil http;
   private DefaultHttpClient client;
   private ObjectMapper mapper = new ObjectMapper();
   private JsonFactory jsonFactory = new JsonFactory();
 
   @Inject
-  public ArticleIndexerImpl(ArticleManager articleManager, HttpUtil http, DefaultHttpClient client,
-    NameFoundManager nameFoundManager) {
-    this.articleManager = articleManager;
-    this.nameFoundManager = nameFoundManager;
+  public ArticleIndexerImpl(ArticleService articleService, HttpUtil http, DefaultHttpClient client,
+    NameFoundService nameFoundService) {
+    this.articleService = articleService;
+    this.nameFoundService = nameFoundService;
     this.http = http;
     this.client = client;
   }
@@ -85,17 +85,17 @@ public class ArticleIndexerImpl implements ArticleIndexer {
     List<NameFound> names = findNames(article);
     // persist names
     log.debug("persist {} found names for article {}", names.size(), article.getId());
-    nameFoundManager.replaceNameInArticle(article.getId(), names);
+    nameFoundService.replaceNameInArticle(article.getId(), names);
     // mark as indexed
     log.debug("update article {} as indexed", article.getId());
     article.setLastIndexed(new Date());
-    articleManager.update(article);
+    articleService.update(article);
 
     return names;
   }
 
   private void grabText(Article article) {
-    File storedFile = articleManager.getArticleFile(article);
+    File storedFile = articleService.getArticleFile(article);
     if (storedFile.exists()) {
       log.debug("Article {} already downloaded: {}", article.getId(), storedFile.getAbsolutePath());
     } else if (StringUtils.isBlank(article.getUrl())) {
@@ -117,7 +117,7 @@ public class ArticleIndexerImpl implements ArticleIndexer {
       } catch (Exception e) {
         log.warn("Failed to download linked article {}", article.getId(), e);
         FileUtils.deleteQuietly(storedFile);
-        article.setError(JournalManagerImpl.getErrorMessage(e));
+        article.setError(JournalServiceImpl.getErrorMessage(e));
       }
     }
 

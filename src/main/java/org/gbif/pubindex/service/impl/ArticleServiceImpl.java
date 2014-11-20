@@ -17,10 +17,11 @@
 /**
  *
  */
-package org.gbif.pubindex.manager.impl;
+package org.gbif.pubindex.service.impl;
 
-import org.gbif.pubindex.manager.ArticleManager;
+import org.gbif.pubindex.config.PubindexConfig;
 import org.gbif.pubindex.model.Article;
+import org.gbif.pubindex.service.ArticleService;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -29,39 +30,34 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import org.apache.ibatis.exceptions.PersistenceException;
 
 /**
  *
  */
-public class ArticleManagerImpl extends BaseManager<Article> implements ArticleManager {
-    private File repo;
+public class ArticleServiceImpl extends BaseServiceImpl<Article> implements ArticleService {
 
-@Inject
-public ArticleManagerImpl() {
+  private final File repo;
+
+  @Inject
+  public ArticleServiceImpl(PubindexConfig cfg) {
     super("Article");
+    this.repo = cfg.repo;
   }
 
   @Override
-  public void setRepo(File repo) {
-    log.info("Using article repository: {}", repo.getAbsolutePath());
-    this.repo = repo;
+  public File getArticleFile(Article article) {
+    return new File(repo, "articles/j" + article.getJournalId() + "/a" + article.getId());
   }
 
   @Override
-    public File getArticleFile(Article article) {
-        return new File(repo, "articles/j"+article.getJournalId()+"/a"+article.getId());
-    }
-
-    @Override
   public List<Article> listNotYetIndexed() {
-    return list(Article.class,"listNotYetIndexed");
+    return list(Article.class, "listNotYetIndexed");
   }
 
   @Override
   public Article getByUrl(String url) {
-    return selectOne(Article.class,"getByUrl",url);
+    return selectOne(Article.class, "getByUrl", url);
   }
 
   /**
@@ -69,21 +65,21 @@ public ArticleManagerImpl() {
    * Only truely new articles are then persisted and returned.
    *
    * @param articles without id that might be new
-   * @return a new list with only the new, persisted articles
    *
+   * @return a new list with only the new, persisted articles
    */
   @Override
   public List<Article> persistNewArticles(List<Article> articles) {
     List<Article> articles2 = new ArrayList<Article>();
-    for (Article a : articles){
-      if (a==null) continue;
+    for (Article a : articles) {
+      if (a == null) continue;
       Article existing = getByGuidAndJournal(a.getGuid(), a.getJournalId());
-      if (existing==null){
+      if (existing == null) {
         try {
           insert(a);
           articles2.add(a);
         } catch (PersistenceException e) {
-          log.error("Error persisting new article for journal "+ a.getJournalId()+" : "+a.getUrl(), e);
+          log.error("Error persisting new article for journal " + a.getJournalId() + " : " + a.getUrl(), e);
         }
       }
     }
@@ -91,7 +87,7 @@ public ArticleManagerImpl() {
     return articles2;
   }
 
-  private Article getByGuidAndJournal(String guid, int journalId){
+  private Article getByGuidAndJournal(String guid, int journalId) {
     Map<String, Object> params = new HashMap<String, Object>();
     params.put("guid", guid);
     params.put("journalId", journalId);

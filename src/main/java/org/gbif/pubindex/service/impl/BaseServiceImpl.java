@@ -1,7 +1,7 @@
 /**
  *
  */
-package org.gbif.pubindex.manager.impl;
+package org.gbif.pubindex.service.impl;
 
 import org.gbif.pubindex.model.Identifiable;
 
@@ -17,16 +17,14 @@ import org.slf4j.LoggerFactory;
 /**
  * Base of all manager implementations that use iBatis for ORM
  * Utility methods provided to ensure that sessions are handled gracefully
- *
- * @author tim
  */
-public class BaseManager<T extends Identifiable> {
+public class BaseServiceImpl<T extends Identifiable> {
   protected Logger log = LoggerFactory.getLogger(getClass());
   @Inject
   protected SqlSessionFactory sqlSessionFactory;
   protected final String sqlKeySuffix;
 
-  public BaseManager(String sqlKeyPrefix) {
+  public BaseServiceImpl(String sqlKeyPrefix) {
     this.sqlKeySuffix = sqlKeyPrefix;
   }
 

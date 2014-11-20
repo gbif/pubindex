@@ -13,20 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gbif.pubindex.guice;
+package org.gbif.pubindex.config;
 
-import org.gbif.pubindex.PubindexCommander;
 import org.gbif.pubindex.indexer.ContinousJournalIndexing;
-import org.gbif.pubindex.manager.ArticleIndexer;
-import org.gbif.pubindex.manager.ArticleManager;
-import org.gbif.pubindex.manager.FeedParser;
-import org.gbif.pubindex.manager.JournalManager;
-import org.gbif.pubindex.manager.NameFoundManager;
-import org.gbif.pubindex.manager.impl.ArticleIndexerImpl;
-import org.gbif.pubindex.manager.impl.ArticleManagerImpl;
-import org.gbif.pubindex.manager.impl.FeedParserRome;
-import org.gbif.pubindex.manager.impl.JournalManagerImpl;
-import org.gbif.pubindex.manager.impl.NameFoundManagerImpl;
+import org.gbif.pubindex.service.ArticleIndexer;
+import org.gbif.pubindex.service.ArticleService;
+import org.gbif.pubindex.service.FeedParser;
+import org.gbif.pubindex.service.JournalService;
+import org.gbif.pubindex.service.NameFoundService;
+import org.gbif.pubindex.service.impl.ArticleIndexerImpl;
+import org.gbif.pubindex.service.impl.ArticleServiceImpl;
+import org.gbif.pubindex.service.impl.FeedParserRome;
+import org.gbif.pubindex.service.impl.JournalServiceImpl;
+import org.gbif.pubindex.service.impl.NameFoundServiceImpl;
 import org.gbif.utils.HttpUtil;
 
 import java.io.IOException;
@@ -43,28 +42,28 @@ import org.apache.ibatis.io.Resources;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.apache.ibatis.session.SqlSessionFactoryBuilder;
 
-public class GuiceConfig implements Module{
+public class GuiceConfig implements Module {
+  private final PubindexConfig cfg;
+
+  public GuiceConfig(PubindexConfig cfg) {
+    this.cfg = cfg;
+  }
 
   @Override
   public void configure(Binder binder) {
-    binder.bind(JournalManager.class).to(JournalManagerImpl.class);
-    binder.bind(ArticleManager.class).to(ArticleManagerImpl.class);
-    binder.bind(NameFoundManager.class).to(NameFoundManagerImpl.class);
+    binder.bind(PubindexConfig.class).toInstance(cfg);
+    binder.bind(JournalService.class).to(JournalServiceImpl.class);
+    binder.bind(ArticleService.class).to(ArticleServiceImpl.class);
+    binder.bind(NameFoundService.class).to(NameFoundServiceImpl.class);
     binder.bind(ArticleIndexer.class).to(ArticleIndexerImpl.class);
     binder.bind(FeedParser.class).to(FeedParserRome.class);
 
     binder.bind(ContinousJournalIndexing.class).in(Scopes.SINGLETON);
-    binder.bind(PubindexCommander.class).in(Scopes.NO_SCOPE);
-
-
   }
 
   @Provides
   @Singleton
   public SqlSessionFactory provideSqlSessionFactory() throws IOException {
-    // setup the iBatis ORM
-    // this might not be the optimal way of doing this, but basically the session factory is
-    // injected into each manager (basemanager) and the config is read once only here
     Reader reader = Resources.getResourceAsReader("ibatis-config.xml");
     return new SqlSessionFactoryBuilder().build(reader);
   }

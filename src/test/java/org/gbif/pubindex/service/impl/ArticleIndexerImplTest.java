@@ -13,22 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gbif.pubindex.manager;
+package org.gbif.pubindex.service.impl;
 
-import org.gbif.pubindex.model.Identifiable;
+import org.junit.Test;
 
-import java.util.List;
+import static junit.framework.Assert.assertEquals;
 
-public interface CRUDManager<T extends Identifiable> {
+public class ArticleIndexerImplTest {
 
-  public T get(Integer id);
-
-  public void insert(T object);
-
-  public void delete(int id);
-
-  public void update(T object);
-
-  public List<T> list();
+  @Test
+  public void testCleanTfArtifacts(){
+    ArticleIndexerImpl ai = new ArticleIndexerImpl(null,null,null,null);
+    assertEquals("Abies alba", ai.cleanTfArtifacts("Abies alba"));
+    assertEquals("Abies alba Mill.", ai.cleanTfArtifacts("Abies alba Mill."));
+    assertEquals("Abies alba", ai.cleanTfArtifacts("A[bies] alba"));
+  }
 
 }

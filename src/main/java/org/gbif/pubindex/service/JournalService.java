@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gbif.pubindex.manager;
+package org.gbif.pubindex.service;
 
 import org.gbif.pubindex.model.Journal;
 
 import com.sun.syndication.feed.synd.SyndFeed;
 
-public interface JournalManager extends CRUDManager<Journal>{
+public interface JournalService extends CRUDService<Journal> {
 
   /**
    * Reads and parses the latest feed from the given journal.

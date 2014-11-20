@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gbif.pubindex.manager.impl;
+package org.gbif.pubindex.service.impl;
 
-import org.gbif.pubindex.manager.FeedParser;
+import org.gbif.pubindex.service.FeedParser;
 import org.gbif.pubindex.model.Article;
 import org.gbif.pubindex.rome.modules.prism.PrismModule;
 import org.gbif.pubindex.util.DoiUtils;

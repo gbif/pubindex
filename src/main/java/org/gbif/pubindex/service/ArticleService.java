@@ -13,20 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gbif.pubindex.manager;
+package org.gbif.pubindex.service;
 
 import org.gbif.pubindex.model.Article;
 
 import java.io.File;
 import java.util.List;
 
-public interface ArticleManager extends CRUDManager<Article>{
-
-  /**
-   * (Re)sets the location of the article repository of pubindex
-   * @param repo
-   */
-  public void setRepo(File repo);
+public interface ArticleService extends CRUDService<Article> {
 
   /**
    * returns the file to externally store the linked article in

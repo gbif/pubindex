@@ -15,10 +15,10 @@
  */
 package org.gbif.pubindex.indexer;
 
-import org.gbif.pubindex.manager.ArticleIndexer;
-import org.gbif.pubindex.manager.ArticleManager;
-import org.gbif.pubindex.manager.FeedParser;
-import org.gbif.pubindex.manager.JournalManager;
+import org.gbif.pubindex.service.ArticleIndexer;
+import org.gbif.pubindex.service.ArticleService;
+import org.gbif.pubindex.service.FeedParser;
+import org.gbif.pubindex.service.JournalService;
 import org.gbif.pubindex.model.Article;
 import org.gbif.pubindex.model.Journal;
 
@@ -44,16 +44,16 @@ import org.slf4j.LoggerFactory;
 public class ContinousJournalIndexing {
 
   private Logger log = LoggerFactory.getLogger(getClass());
-  private JournalManager journalManager;
-  private ArticleManager articleManager;
+  private JournalService journalService;
+  private ArticleService articleService;
   private ArticleIndexer indexer;
   private FeedParser parser;
 
   @Inject
-  public ContinousJournalIndexing(JournalManager journalManager, ArticleManager articleManager, ArticleIndexer indexer,
+  public ContinousJournalIndexing(JournalService journalService, ArticleService articleService, ArticleIndexer indexer,
     FeedParser parser) {
-    this.journalManager = journalManager;
-    this.articleManager = articleManager;
+    this.journalService = journalService;
+    this.articleService = articleService;
     this.indexer = indexer;
     this.parser = parser;
   }
@@ -64,7 +64,7 @@ public class ContinousJournalIndexing {
     // now keep on harvesting journal after journal
     // we never leave this loop!
     while (true) {
-      Journal j = journalManager.getNextJournalForHarvesting();
+      Journal j = journalService.getNextJournalForHarvesting();
       log.debug("Next journal to be harvested is {}", j == null ? "null" : j.getId());
       long waitingTime = 0;
 
@@ -95,7 +95,7 @@ public class ContinousJournalIndexing {
   }
 
   private void indexUnfinishedArticles() {
-    List<Article> articles = articleManager.listNotYetIndexed();
+    List<Article> articles = articleService.listNotYetIndexed();
     log.info("Indexing {} never indexed articles", articles.size());
     for (Article article : articles) {
       index(article);
@@ -117,12 +117,12 @@ public class ContinousJournalIndexing {
   public void index(Journal j) {
     try {
       log.debug("Start harvesting of journal {}", j.getId());
-      SyndFeed feed = journalManager.readFeed(j);
+      SyndFeed feed = journalService.readFeed(j);
       List<Article> articles = new ArrayList<Article>();
       if (feed != null) {
         // extract articles
         articles = parser.buildArticles(feed, j.getId());
-        articles = articleManager.persistNewArticles(articles);
+        articles = articleService.persistNewArticles(articles);
       }
       // now index articles which can take a while
       // we do this therefore after updating the journal to avoid the same journal being picked up for harvesting by other services
