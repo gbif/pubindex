@@ -28,6 +28,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -36,6 +37,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import com.beust.jcommander.internal.Lists;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.inject.Inject;
 import de.l3s.boilerpipe.BoilerpipeProcessingException;
 import de.l3s.boilerpipe.extractors.ArticleExtractor;
@@ -54,7 +58,8 @@ import org.xml.sax.InputSource;
 public class ArticleIndexerImpl implements ArticleIndexer {
 
   private static Logger LOG = LoggerFactory.getLogger(ArticleIndexerImpl.class);
-  private Pattern cleanTFName = Pattern.compile("\\[(.+)\\]");
+  private static final Pattern REMOVE_NULL = Pattern.compile("\u0000+");
+  private static final Pattern cleanTFName = Pattern.compile("\\[(.+)\\]");
   private final String finderWS;
   private ArticleService articleService;
   private NameFoundService nameFoundService;
@@ -69,8 +74,12 @@ public class ArticleIndexerImpl implements ArticleIndexer {
     this.nameFoundService = nameFoundService;
     this.http = http;
     this.client = client;
-    this.finderWS = cfg.nameFinderWs;
-    LOG.info("Using Name Finder Webservice at {}", finderWS);
+    this.finderWS = Strings.emptyToNull(cfg.nameFinderWs);
+    if (finderWS == null) {
+      LOG.warn("No Name Finder Webservice configured! Skipping article indexing");
+    } else {
+      LOG.info("Using Name Finder Webservice at {}", finderWS);
+    }
   }
 
   /**
@@ -83,6 +92,14 @@ public class ArticleIndexerImpl implements ArticleIndexer {
 
     // download linked document and extract text
     grabText(article);
+
+    // only index names if name finder WS is configured!
+    if (finderWS == null) {
+      // store extracted text
+      articleService.update(article);
+      return Lists.newArrayList();
+    }
+
     // find names
     List<NameFound> names = findNames(article);
     // persist names
@@ -92,7 +109,6 @@ public class ArticleIndexerImpl implements ArticleIndexer {
     LOG.debug("update article {} as indexed", article.getId());
     article.setLastIndexed(new Date());
     articleService.update(article);
-
     return names;
   }
 
@@ -125,26 +141,30 @@ public class ArticleIndexerImpl implements ArticleIndexer {
 
     // now find names on existing or newly downloaded file
     if (storedFile.exists()) {
-      article.setExtractedText(extractText(article, storedFile));
-    }
+      try (InputStream in = new FileInputStream(storedFile)) {
+        article.setExtractedText(extractText(article, in));
 
+      } catch (FileNotFoundException e) {
+        LOG.error("Article file not found: {}", storedFile.getAbsolutePath());
+        article.setError("File not found: " + storedFile.getAbsolutePath());
+      } catch (IOException e) {
+        LOG.error("IOException while trying to read article file: {}", storedFile.getAbsolutePath());
+      }
+    }
   }
 
-  private String extractText(Article article, File f) {
-    if (article == null | f == null) {
-      LOG.warn("Null arguments not allowed when extracting text for an article");
-      return null;
-    }
-
+  @VisibleForTesting
+  protected String extractText(Article article, InputStream in) {
     String text = null;
-    FileInputStream in = null;
     try {
-      in = new FileInputStream(f);
       InputSource is = new InputSource(in);
-      text = ArticleExtractor.INSTANCE.getText(is);
-    } catch (FileNotFoundException e) {
-      LOG.error("Article file not found: {}", f.getAbsolutePath());
-      article.setError("File not found: " + f.getAbsolutePath());
+      text = Strings.emptyToNull(ArticleExtractor.INSTANCE.getText(is));
+      if (text != null) {
+        // remove null character found sometimes in xml/html
+        // this causes postgres to choke!
+        text = REMOVE_NULL.matcher(text).replaceAll("");
+      }
+
     } catch (BoilerpipeProcessingException e) {
       LOG.warn("Cannot extract text with boilerpipe: {}", e.getMessage());
       article.setError("Cannot extract text with boilerpipe: " + e.getMessage());
@@ -152,14 +172,6 @@ public class ArticleIndexerImpl implements ArticleIndexer {
     } catch (Exception e) {
       LOG.warn("Cannot extract text: {}", e.getMessage());
       article.setError("Cannot extract text: " + e.getMessage());
-    } finally {
-      if (in != null) {
-        try {
-          in.close();
-        } catch (IOException e) {
-          LOG.error("Can't close input stream for file {}", f.getAbsoluteFile());
-        }
-      }
     }
     return text;
   }
@@ -175,13 +187,6 @@ public class ArticleIndexerImpl implements ArticleIndexer {
       LOG.warn("Head request for article {} failed: {}", url, e.getMessage());
     }
     return null;
-  }
-
-  private void addArticleName(List<NameFound> names, NameFound newName, Article article, NameFound.Source source) {
-    if (newName == null) return;
-    newName.setArticleId(article.getId());
-    newName.setSource(source);
-    names.add(newName);
   }
 
   private List<NameFound> findNames(Article article) {

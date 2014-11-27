@@ -34,7 +34,7 @@
     delete from article where id = #{key}
   </delete>
 
-  <insert id="insert" parameterType="Article" useGeneratedKeys="true" keyProperty="id">
+  <insert id="insert" parameterType="Article" useGeneratedKeys="true" keyProperty="a.id">
     insert into article (journal_fk,
       title, authors, abstract, extracted_text,
       url, url_content_type, error, doi, isbn,

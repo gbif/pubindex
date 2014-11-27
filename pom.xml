@@ -33,6 +33,7 @@
   <description>GBIF Publication Index with found names</description>
 
   <properties>
+    <jdkLevel>1.7</jdkLevel>
   </properties>
 
   <scm>

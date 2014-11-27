@@ -21,7 +21,7 @@
 
   <sql id="nameFoundBasic">select n.* from name_found n </sql>
 
-  <insert id="insert" parameterType="NameFound" useGeneratedKeys="true" keyProperty="id">
+  <insert id="insert" parameterType="NameFound" useGeneratedKeys="true" keyProperty="n.id">
     insert into name_found (article_fk, name,
       name_verbatim, novum,
       offset_start, offset_end, confidence, nub_id, source)

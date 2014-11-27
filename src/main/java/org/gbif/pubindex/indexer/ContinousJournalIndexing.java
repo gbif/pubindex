@@ -15,7 +15,6 @@
  */
 package org.gbif.pubindex.indexer;
 
-import org.gbif.pubindex.config.PubindexConfig;
 import org.gbif.pubindex.model.Article;
 import org.gbif.pubindex.model.Journal;
 import org.gbif.pubindex.service.ArticleIndexer;
@@ -27,7 +26,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import com.google.common.base.Strings;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.sun.syndication.feed.synd.SyndFeed;
@@ -49,25 +47,20 @@ public class ContinousJournalIndexing {
   private final ArticleService articleService;
   private final ArticleIndexer indexer;
   private final FeedParser parser;
-  private final PubindexConfig cfg;
 
   @Inject
-  public ContinousJournalIndexing(PubindexConfig cfg, JournalService journalService, ArticleService articleService, ArticleIndexer indexer,
+  public ContinousJournalIndexing(JournalService journalService, ArticleService articleService, ArticleIndexer indexer,
     FeedParser parser) {
     this.journalService = journalService;
     this.articleService = articleService;
     this.indexer = indexer;
     this.parser = parser;
-    this.cfg = cfg;
   }
 
   public void start() {
     // first pick up unfinished article indexing
-    if (!Strings.isNullOrEmpty(cfg.nameFinderWs)) {
-      indexUnfinishedArticles();
-    } else {
-      LOG.warn("No Name Finder Webservice configured! Skipping article indexing");
-    }
+    indexUnfinishedArticles();
+
     // now keep on harvesting journal after journal
     // we never leave this loop!
     while (true) {
@@ -133,11 +126,8 @@ public class ContinousJournalIndexing {
       }
       // now index articles which can take a while
       // we do this therefore after updating the journal to avoid the same journal being picked up for harvesting by other services
-      // if no name finder WS is configured skip article indexing all together!
-      if (!Strings.isNullOrEmpty(cfg.nameFinderWs)) {
-        for (Article article : articles) {
-          index(article);
-        }
+      for (Article article : articles) {
+        index(article);
       }
     } catch (Exception e) {
       // unexpected exception

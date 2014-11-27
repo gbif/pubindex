@@ -18,11 +18,8 @@ package org.gbif.pubindex.model;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Date;
-import java.util.regex.Pattern;
 
 public class Article {
-  private Pattern REMOVE_NULL = Pattern.compile("\u0000+");
-
   private Integer id;
   private Integer journalId;
   private String title;
@@ -137,9 +134,7 @@ public class Article {
   }
 
   public void setExtractedText(String extractedText) {
-    // remove null character found sometimes in xml/html
-    // this causes postgres to choke!
-    this.extractedText = REMOVE_NULL.matcher(extractedText).replaceAll("");
+    this.extractedText = extractedText;
   }
 
   public String getGuid() {

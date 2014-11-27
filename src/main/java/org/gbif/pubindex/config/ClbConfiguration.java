@@ -60,7 +60,6 @@ public class ClbConfiguration {
         }
       }
     }
-    LOG.info("properties {}", props);
     LOG.info("Connecting to pubindex db {} on {} with user {}", databaseName, serverName, user);
     return props;
   }

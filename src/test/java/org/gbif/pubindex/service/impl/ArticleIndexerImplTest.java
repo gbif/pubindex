@@ -16,10 +16,16 @@
 package org.gbif.pubindex.service.impl;
 
 import org.gbif.pubindex.config.PubindexConfig;
+import org.gbif.pubindex.model.Article;
 
+import java.io.StringReader;
+
+import org.apache.commons.io.input.ReaderInputStream;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertNull;
 
 public class ArticleIndexerImplTest {
 
@@ -29,6 +35,32 @@ public class ArticleIndexerImplTest {
     assertEquals("Abies alba", ai.cleanTfArtifacts("Abies alba"));
     assertEquals("Abies alba Mill.", ai.cleanTfArtifacts("Abies alba Mill."));
     assertEquals("Abies alba", ai.cleanTfArtifacts("A[bies] alba"));
+  }
+
+  @Test
+  @Ignore
+  public void testTextExtraction(){
+    ArticleIndexerImpl ai = new ArticleIndexerImpl(new PubindexConfig(), null,null,null,null);
+    Article a = new Article();
+    a.setId(1);
+
+    // needs to be html/xml/rdf
+    assertNull(ai.extractText(a, new ReaderInputStream(new StringReader(" Hallo  my dear"))));
+
+    assertEquals(" Hallo  my dear", ai.extractText(a, new ReaderInputStream(new StringReader("<html><body> Hallo  my dear</body></html>"))));
+
+    StringBuilder text = new StringBuilder();
+    text.append("<p>");
+    text.append('\u0000');
+    text.append("Carla");
+    text.append("</p>");
+    assertEquals("Carla", ai.extractText(a, new ReaderInputStream(new StringReader(text.toString()))));
+
+    text.append("<p>");
+    text.append('\u003d');
+    text.append('\u0000');
+    text.append("</p>");
+    assertEquals("Carla=", ai.extractText(a, new ReaderInputStream(new StringReader(text.toString()))));
   }
 
 }
