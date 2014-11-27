@@ -20,7 +20,7 @@ import java.net.URL;
 import java.util.Date;
 import java.util.regex.Pattern;
 
-public class Article implements Identifiable{
+public class Article {
   private Pattern REMOVE_NULL = Pattern.compile("\u0000+");
 
   private Integer id;

@@ -22,26 +22,28 @@ package org.gbif.pubindex.service.impl;
 import org.gbif.pubindex.config.PubindexConfig;
 import org.gbif.pubindex.model.Article;
 import org.gbif.pubindex.service.ArticleService;
+import org.gbif.pubindex.service.mapper.ArticleMapper;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import com.google.inject.Inject;
 import org.apache.ibatis.exceptions.PersistenceException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  */
-public class ArticleServiceImpl extends BaseServiceImpl<Article> implements ArticleService {
-
+public class ArticleServiceImpl implements ArticleService {
+  private static Logger LOG = LoggerFactory.getLogger(ArticleServiceImpl.class);
+  private final ArticleMapper mapper;
   private final File repo;
 
   @Inject
-  public ArticleServiceImpl(PubindexConfig cfg) {
-    super("Article");
+  public ArticleServiceImpl(PubindexConfig cfg, ArticleMapper mapper) {
+    this.mapper = mapper;
     this.repo = cfg.repo;
   }
 
@@ -52,12 +54,12 @@ public class ArticleServiceImpl extends BaseServiceImpl<Article> implements Arti
 
   @Override
   public List<Article> listNotYetIndexed() {
-    return list(Article.class, "listNotYetIndexed");
+    return mapper.listNotYetIndexed();
   }
 
   @Override
   public Article getByUrl(String url) {
-    return selectOne(Article.class, "getByUrl", url);
+    return mapper.getByUrl(url);
   }
 
   /**
@@ -73,24 +75,28 @@ public class ArticleServiceImpl extends BaseServiceImpl<Article> implements Arti
     List<Article> articles2 = new ArrayList<Article>();
     for (Article a : articles) {
       if (a == null) continue;
-      Article existing = getByGuidAndJournal(a.getGuid(), a.getJournalId());
+      Article existing = mapper.getByGuidAndJournal(a.getGuid(), a.getJournalId());
       if (existing == null) {
         try {
-          insert(a);
+          mapper.insert(a);
           articles2.add(a);
         } catch (PersistenceException e) {
-          log.error("Error persisting new article for journal " + a.getJournalId() + " : " + a.getUrl(), e);
+          LOG.error("Error persisting new article for journal " + a.getJournalId() + " : " + a.getUrl(), e);
         }
       }
     }
-    log.debug("{} new articles found", articles2.size());
+    LOG.debug("{} new articles found", articles2.size());
     return articles2;
   }
 
-  private Article getByGuidAndJournal(String guid, int journalId) {
-    Map<String, Object> params = new HashMap<String, Object>();
-    params.put("guid", guid);
-    params.put("journalId", journalId);
-    return selectOne(Article.class, "getByGuidAndJournal", params);
+  @Override
+  public void update(Article article) {
+    mapper.update(article);
   }
+
+  @Override
+  public Article get(int key) {
+    return mapper.get(key);
+  }
+
 }

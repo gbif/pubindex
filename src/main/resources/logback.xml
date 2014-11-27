@@ -28,7 +28,7 @@
     </encoder>
   </appender>
 
-    <logger name="org.gbif" level="DEBUG"/>
+    <logger name="org.gbif.pubindex" level="INFO"/>
 
     <root level="WARN">
         <appender-ref ref="CONSOLE" />

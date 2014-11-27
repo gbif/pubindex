@@ -22,6 +22,7 @@ public class ArticleIndexingCommand extends PubindexBaseCommand {
 
   @Override
   protected void doRun() {
+    super.doRun();
     ArticleIndexer indexer = injector.getInstance(ArticleIndexer.class);
     ArticleService articleService = injector.getInstance(ArticleService.class);
     LOG.info("(Re-)indexing {} requested articles", cfg.articles.size());

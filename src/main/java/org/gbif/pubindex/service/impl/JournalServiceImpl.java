@@ -19,9 +19,11 @@
  */
 package org.gbif.pubindex.service.impl;
 
-import org.gbif.pubindex.service.JournalService;
 import org.gbif.pubindex.model.Journal;
 import org.gbif.pubindex.rome.modules.prism.PrismModule;
+import org.gbif.pubindex.service.JournalService;
+import org.gbif.pubindex.service.mapper.JournalMapper;
+import org.gbif.pubindex.util.ErrorUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,19 +39,23 @@ import com.sun.syndication.io.XmlReader;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  */
-public class JournalServiceImpl extends BaseServiceImpl<Journal> implements JournalService {
-  private DefaultHttpClient client;
+public class JournalServiceImpl implements JournalService {
+  private static Logger LOG = LoggerFactory.getLogger(JournalServiceImpl.class);
+  private final HttpClient client;
+  private final JournalMapper mapper;
 
   @Inject
-  public JournalServiceImpl(DefaultHttpClient client) {
-    super("Journal");
+  public JournalServiceImpl(HttpClient client, JournalMapper mapper) {
     this.client=client;
+    this.mapper = mapper;
   }
 
   @Override
@@ -57,9 +63,9 @@ public class JournalServiceImpl extends BaseServiceImpl<Journal> implements Jour
     SyndFeed feed=null;
     if (j==null) return null;
 
-    log.debug("Reading latest rss feed for journal {}", j.getId());
+    LOG.debug("Reading latest rss feed for journal {}", j.getId());
     if (StringUtils.isBlank(j.getFeedUrl())){
-      log.warn("Journal {} has no rss feed configured", j.getId());
+      LOG.warn("Journal {} has no rss feed configured", j.getId());
       return null;
     }
     InputStream stream=null;
@@ -70,32 +76,34 @@ public class JournalServiceImpl extends BaseServiceImpl<Journal> implements Jour
       get.addHeader("User-Agent", "GBIF-PubIndex/1.0");
 
       HttpResponse response = client.execute(get);
-      log.debug("Feed http status: {} {}", response.getStatusLine().getStatusCode(), response.getStatusLine().getReasonPhrase());
+      LOG.debug("Feed http status: {} {}", response.getStatusLine().getStatusCode(),
+        response.getStatusLine().getReasonPhrase());
       HttpEntity entity = response.getEntity();
       if (entity != null) {
         stream = entity.getContent();
         SyndFeedInput input = new SyndFeedInput();
         feed = input.build(new XmlReader(stream, entity.getContentType().getValue()));
         j.setError(null);
-        log.info("Current feed for journal " + j.getId() + " published on {} contains {} articles", feed.getPublishedDate(), feed.getEntries().size());
+        LOG.info("Current feed for journal " + j.getId() + " published on {} contains {} articles",
+          feed.getPublishedDate(), feed.getEntries().size());
         // update journal, find new properties we dont yet have
         updateJournalFromFeed(j,feed);
       }else{
-        log.warn("Journal {} feed {} has no content", j.getId(), j.getFeedUrl());
+        LOG.warn("Journal {} feed {} has no content", j.getId(), j.getFeedUrl());
         j.setError("Journal feed has no content");
       }
     } catch (MalformedURLException e) {
-      log.warn("Journal {} has invalid feed URL {}", j.getId(), j.getFeedUrl());
-      j.setError(getErrorMessage(e));
+      LOG.warn("Journal {} has invalid feed URL {}", j.getId(), j.getFeedUrl());
+      j.setError(ErrorUtils.getErrorMessage(e));
     } catch (FeedException e) {
-      log.warn("Feed for journal {} cannot be parsed {}", j.getId(), e.getMessage());
-      j.setError(getErrorMessage(e));
+      LOG.warn("Feed for journal {} cannot be parsed {}", j.getId(), e.getMessage());
+      j.setError(ErrorUtils.getErrorMessage(e));
     } catch (IOException e) {
-      log.warn("Cant read feed for journal {} : {}", j.getId(), e.getMessage());
-      j.setError(getErrorMessage(e));
+      LOG.warn("Cant read feed for journal {} : {}", j.getId(), e.getMessage());
+      j.setError(ErrorUtils.getErrorMessage(e));
     } catch (Exception e) {
-      log.warn("Unkown exception while reading feed for journal {} : {}", j.getId(), e.getMessage());
-      j.setError(getErrorMessage(e));
+      LOG.warn("Unkown exception while reading feed for journal {} : {}", j.getId(), e.getMessage());
+      j.setError(ErrorUtils.getErrorMessage(e));
     } finally {
       if (stream!=null){
         try {
@@ -108,7 +116,7 @@ public class JournalServiceImpl extends BaseServiceImpl<Journal> implements Jour
     // mark as harvested
     j.setLastHarvest(new Date());
     // update postgres
-    update(j);
+    mapper.update(j);
 
     return feed;
   }
@@ -146,17 +154,13 @@ public class JournalServiceImpl extends BaseServiceImpl<Journal> implements Jour
     }
   }
 
-  public static String getErrorMessage(Exception e){
-    return e.getMessage()==null ? e.getClass().getSimpleName() : e.getMessage();
-  }
-
   @Override
   public Journal getByFeed(String url) {
-    return selectOne(Journal.class, "getByFeed", url);
+    return mapper.getByFeed(url);
   }
 
   @Override
   public Journal getNextJournalForHarvesting() {
-    return selectOne(Journal.class, "getNextJournalForHarvesting");
+    return mapper.getNextJournalForHarvesting();
   }
 }

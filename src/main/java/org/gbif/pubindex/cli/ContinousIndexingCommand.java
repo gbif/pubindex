@@ -17,11 +17,12 @@ public class ContinousIndexingCommand extends PubindexBaseCommand {
   private static final Logger LOG = LoggerFactory.getLogger(ContinousIndexingCommand.class);
 
   public ContinousIndexingCommand() {
-    super("indexing");
+    super("continous");
   }
 
   @Override
   protected void doRun() {
+    super.doRun();
     ContinousJournalIndexing service = injector.getInstance(ContinousJournalIndexing.class);
     LOG.info("Starting continous indexing service");
     service.start();

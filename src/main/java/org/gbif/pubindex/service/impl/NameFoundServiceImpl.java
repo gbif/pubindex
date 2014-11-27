@@ -19,9 +19,9 @@
  */
 package org.gbif.pubindex.service.impl;
 
-import org.gbif.pubindex.service.ArticleService;
-import org.gbif.pubindex.service.NameFoundService;
 import org.gbif.pubindex.model.NameFound;
+import org.gbif.pubindex.service.NameFoundService;
+import org.gbif.pubindex.service.mapper.NameFoundMapper;
 
 import java.util.List;
 
@@ -29,33 +29,32 @@ import com.google.inject.Inject;
 
 /**
  * @author mdoering
- *
  */
-public class NameFoundServiceImpl extends BaseServiceImpl<NameFound> implements NameFoundService {
+public class NameFoundServiceImpl implements NameFoundService {
 
-    private ArticleService articleService;
+  private final NameFoundMapper mapper;
 
-@Inject
-public NameFoundServiceImpl(ArticleService articleService) {
-    super("NameFound");
-    this.articleService = articleService;
+  @Inject
+  public NameFoundServiceImpl(NameFoundMapper mapper) {
+    this.mapper = mapper;
   }
 
   @Override
   public void replaceNameInArticle(int articleID, List<NameFound> names) {
     // remove existing names
-    update("deleteByArticle", articleID);
+    mapper.deleteByArticle(articleID);
     // insert new ones
-    for (NameFound n : names){
+    for (NameFound n : names) {
       n.setArticleId(articleID);
-      insert(n);
+      mapper.insert(n);
     }
   }
 
-  /** @return the list of found names in the given article if index already, otherwise an empty list */
+  /**
+   * @return the list of found names in the given article if index already, otherwise an empty list
+   */
   @Override
   public List<NameFound> listNamesInArticle(int articleID) {
-    // TODO: Write implementation
-    throw new UnsupportedOperationException("Not implemented yet");
+    return mapper.listByArticle(articleID);
   }
 }

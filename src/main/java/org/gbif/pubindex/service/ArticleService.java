@@ -20,31 +20,33 @@ import org.gbif.pubindex.model.Article;
 import java.io.File;
 import java.util.List;
 
-public interface ArticleService extends CRUDService<Article> {
+public interface ArticleService {
+
+  Article get(int artID);
 
   /**
    * returns the file to externally store the linked article in
-   * @param article
-   * @return
    */
-    public File getArticleFile(Article article);
+  File getArticleFile(Article article);
 
-    public List<Article> listNotYetIndexed();
+  List<Article> listNotYetIndexed();
 
   /**
    * The url to the full article should be unique.
    * This method returns the first matching article for a url or null if nothing can be found.
-   * @param url
-   * @return
    */
-    public Article getByUrl(String url);
+  Article getByUrl(String url);
 
   /**
    * Takes a list of transient, potentially new articles and compares them with existing persisted articles.
    * Only truely new articles are then persisted and returned.
    *
    * @param articles without id that might be new
+   *
    * @return a new list with only the new, persisted articles
    */
-    public List<Article> persistNewArticles(List<Article> articles);
+  List<Article> persistNewArticles(List<Article> articles);
+
+  void update(Article article);
+
 }

@@ -17,7 +17,7 @@ package org.gbif.pubindex.model;
 
 import java.util.Date;
 
-public class Journal implements Identifiable{
+public class Journal {
   private Integer id;
   private String title;
   private String description;

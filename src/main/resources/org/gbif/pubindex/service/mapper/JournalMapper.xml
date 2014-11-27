@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+    PUBLIC "-//ibatis.apache.org//DTD Mapper 3.0//EN"
+    "http://ibatis.apache.org/dtd/ibatis-3-mapper.dtd">
+<mapper namespace="org.gbif.pubindex.service.mapper.JournalMapper">
+
+	<resultMap type="Journal" id="journalRecordResult">
+		<id column="id" property="id" />
+    <result column="title" property="title"/>
+    <result column="description" property="description"/>
+    <result column="keywords" property="keywords"/>
+    <result column="language" property="language"/>
+    <result column="publisher" property="publisher"/>
+    <result column="issn" property="issn"/>
+    <result column="issn_electronic" property="issnElectronic"/>
+    <result column="impact_factor" property="impactFactor"/>
+    <result column="homepage" property="homepage"/>
+    <result column="feed_url" property="feedUrl"/>
+    <result column="error" property="error"/>
+    <result column="logo_url" property="logoUrl"/>
+    <result column="kingdom" property="kingdom"/>
+    <result column="phylum" property="phylum"/>
+    <result column="class" property="clazz"/>
+    <result column="order" property="order"/>
+    <result column="family" property="family"/>
+    <result column="genus" property="genus"/>
+    <result column="species" property="species"/>
+    <result column="created" property="created"/>
+    <result column="last_harvest" property="lastHarvest"/>
+    <result column="indexing_interval" property="indexingInterval"/>
+
+  </resultMap>
+
+	<sql id="journalBasic">select * from journal </sql>
+
+  <select id="get" parameterType="int" resultMap="journalRecordResult">
+    <include refid="journalBasic"/> where id = #{key}
+  </select>
+
+  <update id="update" parameterType="Journal">
+    update journal
+    set title = #{j.title,jdbcType=VARCHAR},
+      description = #{j.description,jdbcType=VARCHAR},
+      publisher = #{j.publisher,jdbcType=VARCHAR},
+      issn = #{j.issn,jdbcType=VARCHAR},
+      issn_electronic = #{j.issnElectronic,jdbcType=VARCHAR},
+      impact_factor = #{j.impactFactor,jdbcType=DECIMAL},
+      homepage = #{j.homepage,jdbcType=VARCHAR},
+      feed_url = #{j.feedUrl,jdbcType=VARCHAR},
+      logo_url = #{j.logoUrl,jdbcType=VARCHAR},
+      kingdom = #{j.kingdom,jdbcType=VARCHAR},
+      phylum = #{j.phylum,jdbcType=VARCHAR},
+      class = #{j.clazz,jdbcType=VARCHAR},
+      "order" = #{j.order,jdbcType=VARCHAR},
+      family = #{j.family,jdbcType=VARCHAR},
+      genus = #{j.genus,jdbcType=VARCHAR},
+      species = #{j.species,jdbcType=VARCHAR},
+      created = #{j.created,jdbcType=TIMESTAMP},
+      last_harvest = #{j.lastHarvest,jdbcType=TIMESTAMP},
+      language = #{j.language,jdbcType=VARCHAR},
+      keywords = #{j.keywords,jdbcType=VARCHAR},
+      error = #{j.error,jdbcType=VARCHAR},
+      indexing_interval = #{j.indexingInterval,jdbcType=INTEGER}
+    where id = #{j.id,jdbcType=INTEGER}
+</update>
+
+  <select id="getByFeed" parameterType="String" resultMap="journalRecordResult">
+    <include refid="journalBasic"/>where feed_url = #{url}
+  </select>
+
+  <select id="getNextJournalForHarvesting" parameterType="String" resultMap="journalRecordResult">
+    <include refid="journalBasic"/>
+    where disabled=false
+    order by last_harvest + interval '1 min' * indexing_interval NULLS FIRST limit 1
+  </select>
+
+</mapper>

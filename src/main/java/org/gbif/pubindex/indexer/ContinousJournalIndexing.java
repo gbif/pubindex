@@ -15,17 +15,19 @@
  */
 package org.gbif.pubindex.indexer;
 
+import org.gbif.pubindex.config.PubindexConfig;
+import org.gbif.pubindex.model.Article;
+import org.gbif.pubindex.model.Journal;
 import org.gbif.pubindex.service.ArticleIndexer;
 import org.gbif.pubindex.service.ArticleService;
 import org.gbif.pubindex.service.FeedParser;
 import org.gbif.pubindex.service.JournalService;
-import org.gbif.pubindex.model.Article;
-import org.gbif.pubindex.model.Journal;
 
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import com.google.common.base.Strings;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.sun.syndication.feed.synd.SyndFeed;
@@ -42,30 +44,35 @@ import org.slf4j.LoggerFactory;
  */
 @Singleton
 public class ContinousJournalIndexing {
-
-  private Logger log = LoggerFactory.getLogger(getClass());
-  private JournalService journalService;
-  private ArticleService articleService;
-  private ArticleIndexer indexer;
-  private FeedParser parser;
+  private static Logger LOG = LoggerFactory.getLogger(ContinousJournalIndexing.class);
+  private final JournalService journalService;
+  private final ArticleService articleService;
+  private final ArticleIndexer indexer;
+  private final FeedParser parser;
+  private final PubindexConfig cfg;
 
   @Inject
-  public ContinousJournalIndexing(JournalService journalService, ArticleService articleService, ArticleIndexer indexer,
+  public ContinousJournalIndexing(PubindexConfig cfg, JournalService journalService, ArticleService articleService, ArticleIndexer indexer,
     FeedParser parser) {
     this.journalService = journalService;
     this.articleService = articleService;
     this.indexer = indexer;
     this.parser = parser;
+    this.cfg = cfg;
   }
 
   public void start() {
     // first pick up unfinished article indexing
-    indexUnfinishedArticles();
+    if (!Strings.isNullOrEmpty(cfg.nameFinderWs)) {
+      indexUnfinishedArticles();
+    } else {
+      LOG.warn("No Name Finder Webservice configured! Skipping article indexing");
+    }
     // now keep on harvesting journal after journal
     // we never leave this loop!
     while (true) {
       Journal j = journalService.getNextJournalForHarvesting();
-      log.debug("Next journal to be harvested is {}", j == null ? "null" : j.getId());
+      LOG.debug("Next journal to be harvested is {}", j == null ? "null" : j.getId());
       long waitingTime = 0;
 
       if (j == null) {
@@ -82,10 +89,10 @@ public class ContinousJournalIndexing {
 
       if (waitingTime > 0) {
         try {
-          log.info("Sleeping for {} ms", waitingTime);
+          LOG.info("Sleeping for {} ms", waitingTime);
           Thread.sleep(waitingTime);
         } catch (InterruptedException e) {
-          log.info("Wakeup continous indexer");
+          LOG.info("Wakeup continous indexer");
         }
       } else if (j != null) {
         index(j);
@@ -96,27 +103,27 @@ public class ContinousJournalIndexing {
 
   private void indexUnfinishedArticles() {
     List<Article> articles = articleService.listNotYetIndexed();
-    log.info("Indexing {} never indexed articles", articles.size());
+    LOG.info("Indexing {} never indexed articles", articles.size());
     for (Article article : articles) {
       index(article);
     }
-    log.info("Finished indexing never indexed articles");
+    LOG.info("Finished indexing never indexed articles");
   }
 
   private void index(Article article) {
     try {
-      log.debug("Start indexing of article {}", article.getId());
+      LOG.debug("Start indexing of article {}", article.getId());
       indexer.index(article);
-      log.debug("Finished indexing of article {}", article.getId());
+      LOG.debug("Finished indexing of article {}", article.getId());
     } catch (Exception e) {
       // unexpected exception
-      log.error("Unexpected exception when indexing article {}", article == null ? "null" : article.getId(), e);
+      LOG.error("Unexpected exception when indexing article {}", article == null ? "null" : article.getId(), e);
     }
   }
 
   public void index(Journal j) {
     try {
-      log.debug("Start harvesting of journal {}", j.getId());
+      LOG.debug("Start harvesting of journal {}", j.getId());
       SyndFeed feed = journalService.readFeed(j);
       List<Article> articles = new ArrayList<Article>();
       if (feed != null) {
@@ -126,12 +133,15 @@ public class ContinousJournalIndexing {
       }
       // now index articles which can take a while
       // we do this therefore after updating the journal to avoid the same journal being picked up for harvesting by other services
-      for (Article article : articles) {
-        index(article);
+      // if no name finder WS is configured skip article indexing all together!
+      if (!Strings.isNullOrEmpty(cfg.nameFinderWs)) {
+        for (Article article : articles) {
+          index(article);
+        }
       }
     } catch (Exception e) {
       // unexpected exception
-      log.error("Unexpected exception when indexing journal {}", j == null ? "null" : j.getId(), e);
+      LOG.error("Unexpected exception when indexing journal {}", j == null ? "null" : j.getId(), e);
     }
   }
 }

@@ -15,12 +15,19 @@
  */
 package org.gbif.pubindex.config;
 
+import org.gbif.mybatis.guice.MyBatisModule;
 import org.gbif.pubindex.indexer.ContinousJournalIndexing;
+import org.gbif.pubindex.model.Article;
+import org.gbif.pubindex.model.Journal;
+import org.gbif.pubindex.model.NameFound;
 import org.gbif.pubindex.service.ArticleIndexer;
 import org.gbif.pubindex.service.ArticleService;
 import org.gbif.pubindex.service.FeedParser;
 import org.gbif.pubindex.service.JournalService;
 import org.gbif.pubindex.service.NameFoundService;
+import org.gbif.pubindex.service.mapper.ArticleMapper;
+import org.gbif.pubindex.service.mapper.JournalMapper;
+import org.gbif.pubindex.service.mapper.NameFoundMapper;
 import org.gbif.pubindex.service.impl.ArticleIndexerImpl;
 import org.gbif.pubindex.service.impl.ArticleServiceImpl;
 import org.gbif.pubindex.service.impl.FeedParserRome;
@@ -28,57 +35,61 @@ import org.gbif.pubindex.service.impl.JournalServiceImpl;
 import org.gbif.pubindex.service.impl.NameFoundServiceImpl;
 import org.gbif.utils.HttpUtil;
 
-import java.io.IOException;
-import java.io.Reader;
-
-import com.google.inject.Binder;
 import com.google.inject.Inject;
-import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
+import org.apache.http.client.HttpClient;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.ibatis.io.Resources;
-import org.apache.ibatis.session.SqlSessionFactory;
-import org.apache.ibatis.session.SqlSessionFactoryBuilder;
 
-public class GuiceConfig implements Module {
+public class PubindexMybatisModule extends MyBatisModule {
   private final PubindexConfig cfg;
 
-  public GuiceConfig(PubindexConfig cfg) {
+  public PubindexMybatisModule(PubindexConfig cfg) {
+    super(cfg.clb.buildProperties());
     this.cfg = cfg;
   }
 
   @Override
-  public void configure(Binder binder) {
-    binder.bind(PubindexConfig.class).toInstance(cfg);
-    binder.bind(JournalService.class).to(JournalServiceImpl.class);
-    binder.bind(ArticleService.class).to(ArticleServiceImpl.class);
-    binder.bind(NameFoundService.class).to(NameFoundServiceImpl.class);
-    binder.bind(ArticleIndexer.class).to(ArticleIndexerImpl.class);
-    binder.bind(FeedParser.class).to(FeedParserRome.class);
+  protected void bindMappers() {
+    addAlias("Journal").to(Journal.class);
+    addAlias("Article").to(Article.class);
+    addAlias("NameFound").to(NameFound.class);
 
-    binder.bind(ContinousJournalIndexing.class).in(Scopes.SINGLETON);
+    addMapperClass(JournalMapper.class);
+    addMapperClass(ArticleMapper.class);
+    addMapperClass(NameFoundMapper.class);
+  }
+
+  @Override
+  protected void bindTypeHandlers() {
+    // nothing to do
+  }
+
+  @Override
+  protected void bindManagers() {
+    bind(PubindexConfig.class).toInstance(cfg);
+    bind(JournalService.class).to(JournalServiceImpl.class).in(Scopes.SINGLETON);
+    bind(ArticleService.class).to(ArticleServiceImpl.class).in(Scopes.SINGLETON);
+    bind(NameFoundService.class).to(NameFoundServiceImpl.class).in(Scopes.SINGLETON);
+
+    bind(ArticleIndexer.class).to(ArticleIndexerImpl.class);
+    bind(FeedParser.class).to(FeedParserRome.class);
+    bind(ContinousJournalIndexing.class).in(Scopes.SINGLETON);
+
   }
 
   @Provides
   @Singleton
-  public SqlSessionFactory provideSqlSessionFactory() throws IOException {
-    Reader reader = Resources.getResourceAsReader("ibatis-config.xml");
-    return new SqlSessionFactoryBuilder().build(reader);
-  }
-
-  @Provides
-  @Singleton
-  public DefaultHttpClient provideHttpClient(){
+  public HttpClient provideHttpClient(){
     return HttpUtil.newMultithreadedClient(10000, 20, 10);
   }
 
   @Provides
   @Singleton
   @Inject
-  public HttpUtil provideHttpUtil(DefaultHttpClient client) {
-    return new HttpUtil(client);
+  public HttpUtil provideHttpUtil(HttpClient client) {
+    return new HttpUtil((DefaultHttpClient) client);
   }
 
 }

@@ -19,7 +19,7 @@ import org.gbif.pubindex.model.Journal;
 
 import com.sun.syndication.feed.synd.SyndFeed;
 
-public interface JournalService extends CRUDService<Journal> {
+public interface JournalService {
 
   /**
    * Reads and parses the latest feed from the given journal.

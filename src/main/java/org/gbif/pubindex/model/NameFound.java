@@ -15,7 +15,7 @@
  */
 package org.gbif.pubindex.model;
 
-public class NameFound implements Identifiable {
+public class NameFound {
   public enum Source{
     TITLE,ABSTRACT,KEYWORDS,ARTICLE;
     public static Source lookup(Integer sourceid){

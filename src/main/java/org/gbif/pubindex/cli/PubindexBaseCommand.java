@@ -1,8 +1,8 @@
 package org.gbif.pubindex.cli;
 
 import org.gbif.cli.BaseCommand;
-import org.gbif.pubindex.config.GuiceConfig;
 import org.gbif.pubindex.config.PubindexConfig;
+import org.gbif.pubindex.config.PubindexMybatisModule;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -16,11 +16,10 @@ public abstract class PubindexBaseCommand extends BaseCommand {
   private static final Logger LOG = LoggerFactory.getLogger(PubindexBaseCommand.class);
 
   protected final PubindexConfig cfg = new PubindexConfig();
-  protected final Injector injector;
+  protected Injector injector;
 
   public PubindexBaseCommand(String name) {
     super(name);
-    injector = Guice.createInjector(new GuiceConfig(cfg));
   }
 
   @Override
@@ -28,4 +27,8 @@ public abstract class PubindexBaseCommand extends BaseCommand {
     return cfg;
   }
 
+  @Override
+  protected void doRun() {
+    injector = Guice.createInjector(new PubindexMybatisModule(cfg));
+  }
 }

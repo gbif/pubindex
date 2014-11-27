@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+    PUBLIC "-//ibatis.apache.org//DTD Mapper 3.0//EN"
+    "http://ibatis.apache.org/dtd/ibatis-3-mapper.dtd">
+<mapper namespace="org.gbif.pubindex.service.mapper.ArticleMapper">
+  <resultMap type="Article" id="articleRecordResult">
+    <id property="id" column="id"/>
+    <result column="journal_fk" property="journalId"/>
+    <result column="title" property="title"/>
+    <result column="authors" property="authors"/>
+    <result column="abstract" property="description"/>
+    <result column="keywords" property="keywords"/>
+    <result column="extracted_text" property="extractedText"/>
+    <result column="published_date" property="publishedDate"/>
+    <result column="published_in" property="publishedIn"/>
+    <result column="url" property="url"/>
+    <result column="doi" property="doi"/>
+    <result column="isbn" property="isbn"/>
+    <result column="created" property="created"/>
+    <result column="last_indexed" property="lastIndexed"/>
+    <result column="guid" property="guid"/>
+    <result column="url_content_type" property="urlContentType"/>
+    <result column="error" property="error"/>
+
+  </resultMap>
+
+  <sql id="articleBasic">select * from article </sql>
+
+  <select id="get" parameterType="int" resultMap="articleRecordResult">
+    <include refid="articleBasic"/>where id = #{key}
+  </select>
+
+  <delete id="delete" parameterType="int">
+    delete from article where id = #{key}
+  </delete>
+
+  <insert id="insert" parameterType="Article" useGeneratedKeys="true" keyProperty="id">
+    insert into article (journal_fk,
+      title, authors, abstract, extracted_text,
+      url, url_content_type, error, doi, isbn,
+      created, published_date, last_indexed,
+      keywords, published_in, guid)
+    values (#{a.journalId,jdbcType=INTEGER},
+      #{a.title,jdbcType=VARCHAR}, #{a.authors,jdbcType=VARCHAR}, #{a.description,jdbcType=VARCHAR}, #{a.extractedText,jdbcType=VARCHAR},
+      #{a.url,jdbcType=VARCHAR}, #{a.urlContentType,jdbcType=VARCHAR}, #{a.error,jdbcType=VARCHAR}, #{a.doi,jdbcType=VARCHAR}, #{a.isbn,jdbcType=VARCHAR},
+      #{a.created,jdbcType=TIMESTAMP}, #{a.publishedDate,jdbcType=TIMESTAMP}, #{a.lastIndexed,jdbcType=TIMESTAMP},
+      #{a.keywords,jdbcType=VARCHAR}, #{a.publishedIn,jdbcType=VARCHAR}, #{a.guid,jdbcType=VARCHAR})
+  </insert>
+
+  <update id="update" parameterType="Article">
+    update article
+    set journal_fk = #{a.journalId,jdbcType=INTEGER},
+      title = #{a.title,jdbcType=VARCHAR},
+      authors = #{a.authors,jdbcType=VARCHAR},
+      abstract = #{a.description,jdbcType=VARCHAR},
+      url = #{a.url,jdbcType=VARCHAR},
+      url_content_type = #{a.urlContentType,jdbcType=VARCHAR},
+      extracted_text = #{a.extractedText,jdbcType=VARCHAR},
+      error = #{a.error,jdbcType=VARCHAR},
+      doi = #{a.doi,jdbcType=VARCHAR},
+      isbn = #{a.isbn,jdbcType=VARCHAR},
+      created = #{a.created,jdbcType=TIMESTAMP},
+      published_date= #{a.publishedDate,jdbcType=TIMESTAMP},
+      published_in= #{a.publishedIn,jdbcType=VARCHAR},
+      last_indexed = #{a.lastIndexed,jdbcType=TIMESTAMP},
+      guid= #{a.guid,jdbcType=VARCHAR},
+      keywords = #{a.keywords,jdbcType=VARCHAR}
+    where id = #{a.id,jdbcType=INTEGER}
+  </update>
+
+
+  <select id="list" resultMap="articleRecordResult">
+    <include refid="articleBasic"/>
+  </select>
+  <select id="getByJournal" parameterType="int" resultMap="articleRecordResult">
+    <include refid="articleBasic"/> where journal_fk = #{id}
+  </select>
+  <select id="getByUrl" parameterType="String" resultMap="articleRecordResult">
+    <include refid="articleBasic"/> where url = #{url}
+  </select>
+  <select id="getByGuidAndJournal" parameterType="java.util.HashMap" resultMap="articleRecordResult">
+    <include refid="articleBasic"/> where journal_fk = #{journalId} and guid = #{guid} limit 1
+  </select>
+
+  <select id="listNotYetIndexed" resultMap="articleRecordResult">
+    <include refid="articleBasic"/> where last_indexed is null
+  </select>
+
+
+</mapper>

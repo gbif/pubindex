@@ -15,6 +15,8 @@
  */
 package org.gbif.pubindex.service.impl;
 
+import org.gbif.pubindex.config.PubindexConfig;
+
 import org.junit.Test;
 
 import static junit.framework.Assert.assertEquals;
@@ -23,7 +25,7 @@ public class ArticleIndexerImplTest {
 
   @Test
   public void testCleanTfArtifacts(){
-    ArticleIndexerImpl ai = new ArticleIndexerImpl(null,null,null,null);
+    ArticleIndexerImpl ai = new ArticleIndexerImpl(new PubindexConfig(), null,null,null,null);
     assertEquals("Abies alba", ai.cleanTfArtifacts("Abies alba"));
     assertEquals("Abies alba Mill.", ai.cleanTfArtifacts("Abies alba Mill."));
     assertEquals("Abies alba", ai.cleanTfArtifacts("A[bies] alba"));

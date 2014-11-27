@@ -19,7 +19,7 @@ import org.gbif.pubindex.model.NameFound;
 
 import java.util.List;
 
-public interface NameFoundService extends CRUDService<NameFound> {
+public interface NameFoundService {
   /**
    * Removes potentially existing names for an article and inserts new found names as given, updating the articleId of all names with the one given explicitly
    * @param articleID of the article the names should be linked to. Overrides any id found in the names itself

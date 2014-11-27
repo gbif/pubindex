@@ -15,11 +15,13 @@
  */
 package org.gbif.pubindex.service.impl;
 
+import org.gbif.pubindex.config.PubindexConfig;
+import org.gbif.pubindex.model.Article;
+import org.gbif.pubindex.model.NameFound;
 import org.gbif.pubindex.service.ArticleIndexer;
 import org.gbif.pubindex.service.ArticleService;
 import org.gbif.pubindex.service.NameFoundService;
-import org.gbif.pubindex.model.Article;
-import org.gbif.pubindex.model.NameFound;
+import org.gbif.pubindex.util.ErrorUtils;
 import org.gbif.utils.HttpUtil;
 
 import java.io.File;
@@ -42,9 +44,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.StatusLine;
+import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpHead;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,23 +53,24 @@ import org.xml.sax.InputSource;
 
 public class ArticleIndexerImpl implements ArticleIndexer {
 
+  private static Logger LOG = LoggerFactory.getLogger(ArticleIndexerImpl.class);
   private Pattern cleanTFName = Pattern.compile("\\[(.+)\\]");
-  private String finderWS = "http://ecat-dev.gbif.org/tf";
-  private Logger log = LoggerFactory.getLogger(getClass());
+  private final String finderWS;
   private ArticleService articleService;
   private NameFoundService nameFoundService;
   private HttpUtil http;
-  private DefaultHttpClient client;
+  private HttpClient client;
   private ObjectMapper mapper = new ObjectMapper();
-  private JsonFactory jsonFactory = new JsonFactory();
 
   @Inject
-  public ArticleIndexerImpl(ArticleService articleService, HttpUtil http, DefaultHttpClient client,
-    NameFoundService nameFoundService) {
+  public ArticleIndexerImpl(PubindexConfig cfg, ArticleService articleService,
+    HttpUtil http, HttpClient client, NameFoundService nameFoundService) {
     this.articleService = articleService;
     this.nameFoundService = nameFoundService;
     this.http = http;
     this.client = client;
+    this.finderWS = cfg.nameFinderWs;
+    LOG.info("Using Name Finder Webservice at {}", finderWS);
   }
 
   /**
@@ -84,10 +86,10 @@ public class ArticleIndexerImpl implements ArticleIndexer {
     // find names
     List<NameFound> names = findNames(article);
     // persist names
-    log.debug("persist {} found names for article {}", names.size(), article.getId());
+    LOG.debug("persist {} found names for article {}", names.size(), article.getId());
     nameFoundService.replaceNameInArticle(article.getId(), names);
     // mark as indexed
-    log.debug("update article {} as indexed", article.getId());
+    LOG.debug("update article {} as indexed", article.getId());
     article.setLastIndexed(new Date());
     articleService.update(article);
 
@@ -97,27 +99,27 @@ public class ArticleIndexerImpl implements ArticleIndexer {
   private void grabText(Article article) {
     File storedFile = articleService.getArticleFile(article);
     if (storedFile.exists()) {
-      log.debug("Article {} already downloaded: {}", article.getId(), storedFile.getAbsolutePath());
+      LOG.debug("Article {} already downloaded: {}", article.getId(), storedFile.getAbsolutePath());
     } else if (StringUtils.isBlank(article.getUrl())) {
-      log.debug("Article {} has no link, find names in feed data only", article.getId());
+      LOG.debug("Article {} has no link, find names in feed data only", article.getId());
     } else {
       // only download if its never been downloaded before
       try {
         article.setUrlContentType(headContentType(article.getUrl()));
-        log.debug("Download article from {} to {}", article.getUrl(), storedFile.getAbsolutePath());
+        LOG.debug("Download article from {} to {}", article.getUrl(), storedFile.getAbsolutePath());
         StatusLine status = http.download(article.getUrlAsURL(), storedFile);
         if (HttpUtil.success(status)) {
-          log.debug("Successfully downloaded article {} to {}", article.getId(), storedFile.getAbsolutePath());
+          LOG.debug("Successfully downloaded article {} to {}", article.getId(), storedFile.getAbsolutePath());
           article.setError(null);
         } else {
-          log.debug("Failed to download linked article {} HTTP{}", article.getId(), status.getStatusCode());
+          LOG.debug("Failed to download linked article {} HTTP{}", article.getId(), status.getStatusCode());
           FileUtils.deleteQuietly(storedFile);
           article.setError("Download failed: HTTP" + status.getStatusCode());
         }
       } catch (Exception e) {
-        log.warn("Failed to download linked article {}", article.getId(), e);
+        LOG.warn("Failed to download linked article {}", article.getId(), e);
         FileUtils.deleteQuietly(storedFile);
-        article.setError(JournalServiceImpl.getErrorMessage(e));
+        article.setError(ErrorUtils.getErrorMessage(e));
       }
     }
 
@@ -130,7 +132,7 @@ public class ArticleIndexerImpl implements ArticleIndexer {
 
   private String extractText(Article article, File f) {
     if (article == null | f == null) {
-      log.warn("Null arguments not allowed when extracting text for an article");
+      LOG.warn("Null arguments not allowed when extracting text for an article");
       return null;
     }
 
@@ -141,21 +143,21 @@ public class ArticleIndexerImpl implements ArticleIndexer {
       InputSource is = new InputSource(in);
       text = ArticleExtractor.INSTANCE.getText(is);
     } catch (FileNotFoundException e) {
-      log.error("Article file not found: {}", f.getAbsolutePath());
+      LOG.error("Article file not found: {}", f.getAbsolutePath());
       article.setError("File not found: " + f.getAbsolutePath());
     } catch (BoilerpipeProcessingException e) {
-      log.warn("Cannot extract text with boilerpipe: {}", e.getMessage());
+      LOG.warn("Cannot extract text with boilerpipe: {}", e.getMessage());
       article.setError("Cannot extract text with boilerpipe: " + e.getMessage());
       // TODO: try with TIKA to extract from pdfs etc...
     } catch (Exception e) {
-      log.warn("Cannot extract text: {}", e.getMessage());
+      LOG.warn("Cannot extract text: {}", e.getMessage());
       article.setError("Cannot extract text: " + e.getMessage());
     } finally {
       if (in != null) {
         try {
           in.close();
         } catch (IOException e) {
-          log.error("Can't close input stream for file {}", f.getAbsoluteFile());
+          LOG.error("Can't close input stream for file {}", f.getAbsoluteFile());
         }
       }
     }
@@ -170,7 +172,7 @@ public class ArticleIndexerImpl implements ArticleIndexer {
       Header ct = response.getFirstHeader("Content-Type");
       return ct == null ? null : StringUtils.trimToNull(ct.getValue());
     } catch (Exception e) {
-      log.warn("Head request for article {} failed: {}", url, e.getMessage());
+      LOG.warn("Head request for article {} failed: {}", url, e.getMessage());
     }
     return null;
   }
@@ -193,13 +195,13 @@ public class ArticleIndexerImpl implements ArticleIndexer {
     // find in full article
     findNamesInText(names, article.getExtractedText(), NameFound.Source.ARTICLE, article);
 
-    log.info("Found {} names in article {}", names.size(), article.getId());
+    LOG.info("Found {} names in article {}", names.size(), article.getId());
     return names;
   }
 
   private void findNamesInText(List<NameFound> names, String text, NameFound.Source source, Article article) {
     if (StringUtils.isBlank(text)) {
-      log.debug("No text in {}", source);
+      LOG.debug("No text in {}", source);
     } else {
       // call taxon finder service
       Map<String, String> params = new HashMap<String, String>();
@@ -208,7 +210,7 @@ public class ArticleIndexerImpl implements ArticleIndexer {
       params.put("format", "json");
       try {
         HttpUtil.Response resp = http.post(finderWS, HttpUtil.map2Entity(params));
-        log.debug("Names found in {} : {}", source, resp.content);
+        LOG.debug("Names found in {} : {}", source, resp.content);
 
         Map<String, Object> json = mapper.readValue(resp.content, Map.class);
         List<Map<String, ?>> jsonNames = (List<Map<String, ?>>) json.get("names");
@@ -236,7 +238,7 @@ public class ArticleIndexerImpl implements ArticleIndexer {
       } catch (URISyntaxException e) {
         // wont happen :)
       } catch (Exception e) {
-        log.error("Problem calling name finder: {}", e);
+        LOG.error("Problem calling name finder: {}", e);
       }
     }
   }
