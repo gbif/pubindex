@@ -1,8 +1,9 @@
 clb:
-  serverName: camelot.gbif.org
+  serverName: pg1.gbif.org
   databaseName: pubindex
   user: pubindex
   password: pogo
   maximumPoolSize: 6
 repo: /Users/markus/Desktop/nfrepo
 #nameFinderWs: http://api.gbif.org/v1/species/finder
+
